@@ -40,16 +40,33 @@ To submit your homework:
 
 
 """
-
+import traceback
 
 def add(*args):
     """ Returns a STRING with the sum of the arguments """
-
     # TODO: Fill sum with the correct value, based on the
     # args provided.
-    sum = "0"
+    result = str(int(args[0]) + int(args[1]))
 
-    return sum
+    return result
+
+def subtract(*args):
+    """ Returns a STRING with the subtract of the arguments """
+    result = str(int(args[0]) - int(args[1]))
+
+    return result
+
+def multiply(*args):
+    """ Returns a STRING with the multiply of the arguments """
+    result = str(int(args[0])* int(args[1]))
+
+    return result
+
+def divide(*args):
+    """ Returns a STRING with the sum of the arguments """
+    result = str(int(args[0])/int(args[1]))
+
+    return result
 
 # TODO: Add functions for handling more arithmetic operations.
 
@@ -63,8 +80,22 @@ def resolve_path(path):
     # examples provide the correct *syntax*, but you should
     # determine the actual values of func and args using the
     # path.
-    func = add
-    args = ['25', '32']
+    funcs = {
+        'add': add,
+        'subtract':subtract,
+        'multiply':multiply,
+        'divide':divide
+    }
+
+    path = path.strip('/').split('/')
+
+    func_name = path[0]
+    args = path[1:]
+
+    try:
+        func = funcs[func_name]
+    except KeyError:
+        raise NameError
 
     return func, args
 
@@ -73,12 +104,40 @@ def application(environ, start_response):
     # work here as well! Remember that your application must
     # invoke start_response(status, headers) and also return
     # the body of the response in BYTE encoding.
+    headers = [("Content-type", "text/html")]
+    
+    try:
+        path = environ.get('PATH_INFO', None)
+        if path is "/":
+            # raise NameError                                                           
+            body = "<html>Here's how to use this page: \n Type a math function \
+                    such as multiply, add, substraction, division \
+                    followed by a forward dash (/)  then two numbers seprated by a dash..</html>"   
+        else:
+            func, args = resolve_path(path)
+            body = func(*args)
+        status = "200 OK"
+    except NameError:
+        status = "404 Not Found"
+        body = "<h1>Not Found</h1>"
+    except ZeroDivisionError:
+        status = "500 Internal Server Error"
+        body = "<h1>Divide by zero error</h1>"
+    except Exception:
+        status = "500 Internal Server Error"
+        body = "<h1>Internal Server Error</h1>"
+        print(traceback.format_exc())
+    finally:
+        headers.append(('Content-length', str(len(body))))
+        start_response(status, headers)
+        return [body.encode('utf8')]
     #
     # TODO (bonus): Add error handling for a user attempting
     # to divide by zero.
-    pass
 
 if __name__ == '__main__':
     # TODO: Insert the same boilerplate wsgiref simple
     # server creation that you used in the book database.
-    pass
+    from wsgiref.simple_server import make_server
+    srv = make_server('localhost', 8080, application)
+    srv.serve_forever()
